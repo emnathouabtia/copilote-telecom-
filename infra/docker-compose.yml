@@ -1,0 +1,18 @@
+services:
+  db:
+    image: postgres:16
+    container_name: copilote_postgres
+    environment:
+      POSTGRES_DB: copilote_supervision
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../data/01_schema_postgresql.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../data/02_seed_postgresql.sql:/docker-entrypoint-initdb.d/02_seed.sql
+      - ../data/07_requetes_dashboard.sql:/docker-entrypoint-initdb.d/03_requetes.sql
+
+volumes:
+  pgdata:
