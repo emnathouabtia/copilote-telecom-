@@ -1,0 +1,9 @@
+﻿code_fiche;categorie;symptome;cause_probable;action_n1;action_n2;niveau_escalade
+KB-CPU-001;SYSTEME;CPU élevé;Processus consommateur, boucle applicative, charge anormale ou attaque par surcharge;Vérifier processus actifs, charge système, logs et historique;Escalader N2 système si persistance;N2_SYSTEME
+KB-RAM-001;SYSTEME;Mémoire saturée;Fuite mémoire, service bloqué, charge applicative élevée;Vérifier consommation mémoire par processus;Escalader équipe système/applicative;N2_SYSTEME
+KB-DISK-001;INFRASTRUCTURE;Disque saturé;Accumulation logs, sauvegardes non purgées;Identifier répertoires volumineux et appliquer rotation logs;Escalader administrateur système;N2_SYSTEME
+KB-LINK-001;RESEAU;Lien indisponible;Coupure lien, interface down, équipement distant indisponible;Vérifier ping, interface, voisinage, historique;Escalader transmission/réseau terrain;N2_RESEAU
+KB-SERV-001;SERVICE;Service arrêté;Crash applicatif, dépendance indisponible, erreur configuration;Vérifier statut service, logs et dépendances;Escalader applicatif;N2_APPLICATIF
+KB-PING-001;RESEAU;Perte supervision;Équipement injoignable, routage, firewall ou panne énergie;Tester connectivité et vérifier état du site;Escalader réseau/terrain;N2_RESEAU
+KB-POWER-001;ENVIRONNEMENT_SITE;Panne énergie;Défaut secteur, batterie faible, redresseur en défaut;Vérifier alarmes énergie et autonomie batterie;Escalader équipe terrain;N2_TERRAIN
+KB-SEC-001;SECURITE;Accès suspects;Brute force SSH, scan réseau ou tentative compromission;Vérifier logs authentification et source IP;Escalader cybersécurité;N2_SECURITE
