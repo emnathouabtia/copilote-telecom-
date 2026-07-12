@@ -1,9 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-import os
 import json
-import asyncio
 from datetime import datetime
 
 load_dotenv()
@@ -14,16 +12,15 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# CORS — permet au frontend React de communiquer avec l'API
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Gestionnaire WebSocket — liste des clients connectés
+# ── WebSocket Manager ──
 class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
@@ -40,16 +37,19 @@ class ConnectionManager:
             await connection.send_text(json.dumps(message))
 
 manager = ConnectionManager()
+
+# ── Routers ──
 from app.routes.alerts import router as alerts_router
-app.include_router(alerts_router)
-# ── ROUTES DE BASE ──
 from app.routes.incidents import router as incidents_router
-app.include_router(incidents_router)
 from app.routes.dashboard import router as dashboard_router
-app.include_router(dashboard_router)
 from app.routes.predict import router as predict_router
+
+app.include_router(alerts_router)
+app.include_router(incidents_router)
+app.include_router(dashboard_router)
 app.include_router(predict_router)
 
+# ── Routes de base ──
 @app.get("/")
 def root():
     return {
@@ -63,8 +63,7 @@ def root():
 def health():
     return {"status": "ok", "timestamp": datetime.now().isoformat()}
 
-# ── WEBSOCKET ──
-
+# ── WebSocket ──
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
@@ -74,69 +73,3 @@ async def websocket_endpoint(websocket: WebSocket):
             await manager.broadcast({"message": data})
     except WebSocketDisconnect:
         manager.disconnect(websocket)
-
-# ── ALERTES ──
-
-@app.get("/alerts")
-def get_alerts():
-    return {
-        "status": "ok",
-        "data": [],
-        "message": "Route alertes — à connecter à PostgreSQL"
-    }
-
-@app.post("/alerts")
-async def create_alert(alert: dict):
-    # Diffuser l'alerte en temps réel via WebSocket
-    await manager.broadcast({
-        "type": "new_alert",
-        "data": alert,
-        "timestamp": datetime.now().isoformat()
-    })
-    return {"status": "ok", "message": "Alerte reçue et diffusée"}
-
-# ── INCIDENTS ──
-
-@app.get("/incidents")
-def get_incidents():
-    return {
-        "status": "ok",
-        "data": [],
-        "message": "Route incidents — à connecter à PostgreSQL"
-    }
-
-# ── DASHBOARD KPI ──
-
-@app.get("/dashboard/kpi")
-def get_kpi():
-    return {
-        "status": "ok",
-        "data": {
-            "alertes_actives": 0,
-            "critiques": 0,
-            "resolus_24h": 0,
-            "mttr_minutes": 0,
-            "disponibilite": 99.9
-        }
-    }
-
-# ── PREDICT (placeholder ML) ──
-
-@app.post("/predict")
-def predict(data: dict):
-    return {
-        "status": "ok",
-        "severite": "MAJEURE",
-        "score": 0.75,
-        "message": "Modèle ML — à brancher en Phase 3"
-    }
-
-# ── CHAT (placeholder LLM) ──
-
-@app.post("/chat")
-def chat(data: dict):
-    return {
-        "status": "ok",
-        "response": "Copilote LLM — à brancher en Phase 4",
-        "source": "placeholder"
-    }

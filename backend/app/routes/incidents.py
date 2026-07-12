@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.models.database import get_db
@@ -51,3 +51,18 @@ def get_incidents(
         "count": len(result),
         "data": [dict(row._mapping) for row in result]
     }
+
+@router.get("/{incident_id}")
+def get_incident(incident_id: str, db: Session = Depends(get_db)):
+    result = db.execute(text("""
+        SELECT i.*, e.nom_equipement, s.nom_site
+        FROM incidents i
+        LEFT JOIN equipements e ON i.equipement_id = e.id
+        LEFT JOIN sites s ON e.site_id = s.id
+        WHERE i.id = :id
+    """), {"id": incident_id}).fetchone()
+
+    if not result:
+        raise HTTPException(status_code=404, detail="Incident introuvable")
+
+    return {"status": "ok", "data": dict(result._mapping)}
