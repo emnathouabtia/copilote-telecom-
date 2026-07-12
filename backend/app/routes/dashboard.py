@@ -16,24 +16,23 @@ def get_kpi(db: Session = Depends(get_db)):
             COUNT(*) FILTER (WHERE severite = 'MINEURE' AND statut NOT IN ('CONVERTIE_INCIDENT', 'IGNOREE')) as mineures
         FROM alertes
     """)).fetchone()
-
     incidents = db.execute(text("""
-        SELECT
-            COUNT(*) FILTER (WHERE statut = 'RESOLU'
-                AND resolu_le >= NOW() - INTERVAL '24 hours') as resolus_24h,
-            COUNT(*) FILTER (WHERE statut NOT IN ('RESOLU', 'FERME')) as incidents_actifs,
-            ROUND(AVG(
-                EXTRACT(EPOCH FROM (resolu_le - cree_le)) / 60
-            ) FILTER (WHERE statut = 'RESOLU'), 0) as mttr_minutes
-        FROM incidents
-    """)).fetchone()
+    SELECT
+        COUNT(*) FILTER (WHERE statut IN ('RESOLU', 'CLOTURE')
+            AND date_resolution >= NOW() - INTERVAL '24 hours') as resolus_24h,
+        COUNT(*) FILTER (WHERE statut NOT IN ('RESOLU', 'CLOTURE')) as incidents_actifs,
+        ROUND(AVG(
+            EXTRACT(EPOCH FROM (date_resolution - date_creation)) / 60
+        ) FILTER (WHERE statut IN ('RESOLU', 'CLOTURE')), 0) as mttr_minutes
+    FROM incidents
+""")).fetchone()
 
     equipements = db.execute(text("""
-        SELECT
-            COUNT(*) as total,
-            COUNT(*) FILTER (WHERE statut_operationnel = 'EN_SERVICE') as en_service
-        FROM equipements
-    """)).fetchone()
+    SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE statut_operational = 'EN_SERVICE') as en_service
+    FROM equipements
+""")).fetchone()
 
     alertes_data = dict(alertes._mapping)
     incidents_data = dict(incidents._mapping)
