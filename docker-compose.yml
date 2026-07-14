@@ -1,0 +1,14 @@
+services:
+  backend:
+    build: ../backend
+    container_name: copilote_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DB_HOST: host.docker.internal
+      DB_PORT: 5436
+      DB_NAME: copilote_supervision
+      DB_USER: origin
+      DB_PASSWORD: origin
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

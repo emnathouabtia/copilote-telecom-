@@ -1,0 +1,337 @@
+/* ===== Base ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: #020617;
+  color: #e2e8f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.page {
+  min-height: 100vh;
+  background-color: #020617;
+  padding: 24px;
+}
+
+/* ===== Navigation ===== */
+.nav {
+  background-color: #020617;
+  border-bottom: 1px solid #1e293b;
+  padding: 12px 24px;
+  display: flex;
+  gap: 8px;
+}
+
+.nav-link {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-family: "Courier New", monospace;
+  font-size: 14px;
+  text-decoration: none;
+  color: #94a3b8;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.nav-link:hover {
+  background-color: #0f172a;
+  color: #e2e8f0;
+}
+
+.nav-link.active {
+  background-color: #1e293b;
+  color: #22d3ee;
+}
+
+/* ===== Header ===== */
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.page-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.page-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+/* ===== Live status dot ===== */
+.live-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Courier New", monospace;
+  font-size: 12px;
+}
+
+.live-dot-wrap {
+  position: relative;
+  display: inline-flex;
+  height: 10px;
+  width: 10px;
+}
+
+.live-dot-ping {
+  position: absolute;
+  inline-size: 100%;
+  block-size: 100%;
+  border-radius: 9999px;
+  background-color: #34d399;
+  opacity: 0.75;
+  animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+.live-dot {
+  position: relative;
+  border-radius: 9999px;
+  height: 10px;
+  width: 10px;
+  background-color: #64748b;
+}
+
+.live-dot.connected {
+  background-color: #10b981;
+}
+
+.live-label {
+  color: #64748b;
+}
+
+.live-label.connected {
+  color: #34d399;
+}
+
+@keyframes ping {
+  75%, 100% {
+    transform: scale(2);
+    opacity: 0;
+  }
+}
+
+/* ===== KPI cards ===== */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 700px) {
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.kpi-card {
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-left: 4px solid #64748b;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.kpi-card.tone-critical { border-left-color: #ef4444; }
+.kpi-card.tone-warning  { border-left-color: #f59e0b; }
+.kpi-card.tone-success  { border-left-color: #10b981; }
+.kpi-card.tone-info     { border-left-color: #22d3ee; }
+
+.kpi-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.tone-critical .kpi-label { color: rgba(239, 68, 68, 0.7); }
+.tone-warning  .kpi-label { color: rgba(245, 158, 11, 0.7); }
+.tone-success  .kpi-label { color: rgba(16, 185, 129, 0.7); }
+.tone-info     .kpi-label { color: rgba(34, 211, 238, 0.7); }
+
+.kpi-value {
+  font-family: "Courier New", monospace;
+  font-size: 30px;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+
+.tone-critical .kpi-value { color: #f87171; }
+.tone-warning  .kpi-value { color: #fbbf24; }
+.tone-success  .kpi-value { color: #34d399; }
+.tone-info     .kpi-value { color: #22d3ee; }
+
+/* ===== Panels (chart, table wrapper) ===== */
+.panel {
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.panel-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #cbd5e1;
+  margin: 0 0 8px;
+}
+
+.chart-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  font-family: "Courier New", monospace;
+  font-size: 13px;
+  height: 220px;
+}
+
+/* ===== Filters ===== */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.select,
+.btn {
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  color: #cbd5e1;
+  font-family: "Courier New", monospace;
+}
+
+.btn {
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.btn:hover {
+  background-color: #1e293b;
+}
+
+.btn-refresh {
+  margin-left: auto;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #fbbf24;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: "Courier New", monospace;
+}
+
+.btn-link:hover {
+  color: #f59e0b;
+}
+
+/* ===== Table ===== */
+.table-wrap {
+  background-color: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead th {
+  text-align: left;
+  color: #64748b;
+  border-bottom: 1px solid #1e293b;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+}
+
+tbody td {
+  padding: 8px 16px;
+}
+
+tbody tr {
+  border-bottom: 1px solid #1e293b;
+  border-left: 4px solid #334155;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+tbody tr:hover {
+  background-color: rgba(30, 41, 59, 0.5);
+}
+
+tbody tr.severite-critique { border-left-color: #ef4444; }
+tbody tr.severite-majeure  { border-left-color: #f59e0b; }
+tbody tr.severite-mineure  { border-left-color: #eab308; }
+tbody tr.severite-info     { border-left-color: #22d3ee; }
+
+.cell-empty {
+  text-align: center;
+  color: #64748b;
+  font-family: "Courier New", monospace;
+  padding: 24px !important;
+}
+
+.ref-cell {
+  font-family: "Courier New", monospace;
+  color: #22d3ee;
+}
+
+.score-cell {
+  font-family: "Courier New", monospace;
+  color: #cbd5e1;
+}
+
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  font-size: 11px;
+  font-family: "Courier New", monospace;
+}
+
+.badge-P1_CRITIQUE { background: rgba(239,68,68,0.15); color: #f87171; border-color: rgba(239,68,68,0.3); }
+.badge-P2_HAUTE    { background: rgba(245,158,11,0.15); color: #fbbf24; border-color: rgba(245,158,11,0.3); }
+.badge-P3_MOYENNE  { background: rgba(234,179,8,0.15); color: #facc15; border-color: rgba(234,179,8,0.3); }
+.badge-P4_BASSE    { background: rgba(100,116,139,0.15); color: #94a3b8; border-color: rgba(100,116,139,0.3); }
+
+.detail-row {
+  background-color: rgba(2, 6, 23, 0.6);
+}
+
+.detail-row td {
+  color: #94a3b8;
+  font-size: 13px;
+}
+
+.detail-label {
+  color: #64748b;
+  font-family: "Courier New", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  margin-right: 8px;
+}

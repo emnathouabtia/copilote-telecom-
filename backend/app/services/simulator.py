@@ -1,3 +1,4 @@
+
 """
 Simulateur d'alertes télécom (backend/app/services/simulator.py)
 
@@ -17,8 +18,7 @@ import uuid
 
 import psycopg2
 import psycopg2.extras
-
-DB_DSN = "dbname=copilote_supervision user=postgres password=postgres host=localhost port=5432"
+DB_DSN = "dbname=copilote_supervision user=origin password=origin host=localhost port=5432"
 
 # Un "profil" par type d'alerte : quelle métrique, quelle unité, quel seuil,
 # et dans quelle fourchette générer une valeur (parfois au-dessus du seuil,

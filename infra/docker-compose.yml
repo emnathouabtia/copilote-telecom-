@@ -5,14 +5,41 @@ services:
     environment:
       POSTGRES_DB: copilote_supervision
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: 1234567
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-      - ../data/01_schema_postgresql.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ../data/02_seed_postgresql.sql:/docker-entrypoint-initdb.d/02_seed.sql
-      - ../data/07_requetes_dashboard.sql:/docker-entrypoint-initdb.d/03_requetes.sql
+      - ../docs/01_schema_postgresql.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../docs/02_seed_postgresql.sql:/docker-entrypoint-initdb.d/02_seed.sql
+
+  redis:
+    image: redis:7-alpine
+    container_name: copilote_redis
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ../backend
+    container_name: copilote_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/copilote_supervision
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ../ml/models:/app/ml/models
+
+  frontend:
+    build: ../frontend
+    container_name: copilote_frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
 
 volumes:
   pgdata:
