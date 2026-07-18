@@ -22,7 +22,7 @@ def get_incidents(
             i.statut,
             i.categorie,
             i.cree_le,
-            i.resolu_le,
+            i.date_resolution,
             e.nom_equipement,
             e.code_equipement,
             s.nom_site

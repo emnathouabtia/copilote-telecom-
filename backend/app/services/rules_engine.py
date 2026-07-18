@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 import psycopg2
 import psycopg2.extras
 
-DB_DSN = "dbname=copilote_supervision user=postgres password=postgres host=localhost port=5432"
+DB_DSN = "dbname=copilote_supervision user=origin password=origin host=localhost port=5432"
 
 SEVERITE_SCORE = {"INFO": 10, "MINEURE": 40, "MAJEURE": 70, "CRITIQUE": 100}
 
@@ -114,9 +114,8 @@ def process_alertes():
             None,
         )
         if match is None:
-            continue  # ne correspond à aucune règle active -> laissée en NOUVELLE
+            continue
 
-        # répétition : nombre d'alertes avec le même fingerprint sur les dernières 24h
         cur.execute(
             "SELECT COUNT(*) FROM alertes WHERE fingerprint = %s AND date_alerte >= NOW() - INTERVAL '24 hours'",
             (al["fingerprint"],),
@@ -128,7 +127,7 @@ def process_alertes():
             + weights.get("POIDS_SERVICE", 25) * al["criticite_service"] / 5
             + weights.get("POIDS_SITE", 20) * al["criticite_site"] / 5
             + weights.get("POIDS_REPETITION", 10) * min(repetitions, 5) / 5
-            + weights.get("POIDS_DUREE", 5) * 0  # durée nulle à la création
+            + weights.get("POIDS_DUREE", 5) * 0
         )
         score = round(min(score, 100), 2)
         priorite = priorite_from_score(score)
@@ -144,19 +143,10 @@ def process_alertes():
             RETURNING id
             """,
             (
-                reference,
-                al["id"],
-                al["site_id"],
-                al["equipement_id"],
-                al["service_id"],
+                reference, al["id"], al["site_id"], al["equipement_id"], al["service_id"],
                 f"Incident {al['type_alerte']} - {al['message']}",
-                match["categorie"],
-                al["severite"],
-                priorite,
-                score,
-                match["cause_probable"],
-                match["action_n1"],
-                match["niveau_escalade"],
+                match["categorie"], al["severite"], priorite, score,
+                match["cause_probable"], match["action_n1"], match["niveau_escalade"],
             ),
         )
         incident_id = cur.fetchone()[0]
