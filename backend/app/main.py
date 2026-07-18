@@ -43,7 +43,8 @@ from app.routes.alerts import router as alerts_router
 from app.routes.incidents import router as incidents_router
 from app.routes.dashboard import router as dashboard_router
 from app.routes.predict import router as predict_router
-
+from app.routes.chat import router as chat_router
+app.include_router(chat_router)
 app.include_router(alerts_router)
 app.include_router(incidents_router)
 app.include_router(dashboard_router)
