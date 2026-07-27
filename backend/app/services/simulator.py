@@ -1,15 +1,15 @@
-
+﻿
 """
-Simulateur d'alertes télécom (backend/app/services/simulator.py)
+Simulateur d'alertes tÃ©lÃ©com (backend/app/services/simulator.py)
 
 Remplace une vraie plateforme de supervision (NMS avec SNMP/Syslog) absente
-pendant le stage. Génère des alertes réalistes et les insère directement
-dans la table `alertes`, en piochant des sites/équipements/services déjà
-créés par 02_seed_postgresql.sql.
+pendant le stage. GÃ©nÃ¨re des alertes rÃ©alistes et les insÃ¨re directement
+dans la table `alertes`, en piochant des sites/Ã©quipements/services dÃ©jÃ 
+crÃ©Ã©s par 02_seed_postgresql.sql.
 
 Usage:
-    python simulator.py            # génère 20 alertes d'un coup et s'arrête
-    python simulator.py --loop     # génère une alerte aléatoire toutes les X secondes, en continu
+    python simulator.py            # gÃ©nÃ¨re 20 alertes d'un coup et s'arrÃªte
+    python simulator.py --loop     # gÃ©nÃ¨re une alerte alÃ©atoire toutes les X secondes, en continu
 """
 import argparse
 import random
@@ -18,10 +18,9 @@ import uuid
 
 import psycopg2
 import psycopg2.extras
-DB_DSN = "dbname=copilote_supervision user=origin password=origin host=localhost port=5432"
-
-# Un "profil" par type d'alerte : quelle métrique, quelle unité, quel seuil,
-# et dans quelle fourchette générer une valeur (parfois au-dessus du seuil,
+DB_DSN = "dbname=copilote_supervision user=postgres password= 1234567 host=localhost port=5432"
+# Un "profil" par type d'alerte : quelle mÃ©trique, quelle unitÃ©, quel seuil,
+# et dans quelle fourchette gÃ©nÃ©rer une valeur (parfois au-dessus du seuil,
 # pour simuler une vraie panne).
 ALERT_PROFILES = {
     "CPU_HIGH": {"metrique": "CPU", "unite": "%", "seuil": 90, "range": (10, 100)},
@@ -42,8 +41,8 @@ def get_connection():
 
 
 def load_reference_data(cur):
-    """Récupère les sites/équipements/services déjà créés par le seed,
-    pour générer des alertes cohérentes (pas d'IDs inventés)."""
+    """RÃ©cupÃ¨re les sites/Ã©quipements/services dÃ©jÃ  crÃ©Ã©s par le seed,
+    pour gÃ©nÃ©rer des alertes cohÃ©rentes (pas d'IDs inventÃ©s)."""
     cur.execute("SELECT id, code_site FROM sites")
     sites = cur.fetchall()
     cur.execute("SELECT id, code_equipement, site_id FROM equipements")
@@ -98,34 +97,34 @@ def run_batch(n: int):
     cur = conn.cursor()
     _, equipements, services = load_reference_data(cur)
     if not equipements or not services:
-        print("Aucun équipement/service trouvé — exécute d'abord 02_seed_postgresql.sql")
+        print("Aucun Ã©quipement/service trouvÃ© â€” exÃ©cute d'abord 02_seed_postgresql.sql")
         return
 
     for _ in range(n):
         alert = generate_alert(equipements, services)
         insert_alert(cur, alert)
-        print(f"Alerte générée : {alert['type_alerte']} ({alert['severite']}) sur {alert['fingerprint']}")
+        print(f"Alerte gÃ©nÃ©rÃ©e : {alert['type_alerte']} ({alert['severite']}) sur {alert['fingerprint']}")
 
     conn.commit()
     cur.close()
     conn.close()
-    print(f"\n{n} alertes insérées dans la table `alertes`.")
+    print(f"\n{n} alertes insÃ©rÃ©es dans la table `alertes`.")
 
 
 def run_loop(interval_seconds: int):
     conn = get_connection()
     cur = conn.cursor()
     _, equipements, services = load_reference_data(cur)
-    print(f"Simulateur en continu (Ctrl+C pour arrêter), une alerte toutes les {interval_seconds}s...")
+    print(f"Simulateur en continu (Ctrl+C pour arrÃªter), une alerte toutes les {interval_seconds}s...")
     try:
         while True:
             alert = generate_alert(equipements, services)
             insert_alert(cur, alert)
             conn.commit()
-            print(f"[{time.strftime('%H:%M:%S')}] Alerte générée : {alert['type_alerte']} ({alert['severite']})")
+            print(f"[{time.strftime('%H:%M:%S')}] Alerte gÃ©nÃ©rÃ©e : {alert['type_alerte']} ({alert['severite']})")
             time.sleep(interval_seconds)
     except KeyboardInterrupt:
-        print("\nSimulateur arrêté.")
+        print("\nSimulateur arrÃªtÃ©.")
     finally:
         cur.close()
         conn.close()
@@ -133,8 +132,8 @@ def run_loop(interval_seconds: int):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--loop", action="store_true", help="génère des alertes en continu au lieu d'un lot unique")
-    parser.add_argument("--n", type=int, default=20, help="nombre d'alertes à générer en mode batch")
+    parser.add_argument("--loop", action="store_true", help="gÃ©nÃ¨re des alertes en continu au lieu d'un lot unique")
+    parser.add_argument("--n", type=int, default=20, help="nombre d'alertes Ã  gÃ©nÃ©rer en mode batch")
     parser.add_argument("--interval", type=int, default=10, help="secondes entre 2 alertes en mode --loop")
     args = parser.parse_args()
 
@@ -142,3 +141,4 @@ if __name__ == "__main__":
         run_loop(args.interval)
     else:
         run_batch(args.n)
+
