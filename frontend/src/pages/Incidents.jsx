@@ -2,8 +2,10 @@ import { useEffect, useState, useCallback } from "react";
 import KPICard from "../components/KPICard";
 import Chart from "../components/Chart";
 import LiveStatusDot from "../components/LiveStatusDot";
+import MLBadge from "../components/MLBadge";
 import { getIncidents, updateIncidentStatus, escaladeIncident } from "../api/incidents";
 import { getKpis, getCategories } from "../api/dashboard";
+import { predictAnomaly } from "../api/ml";
 
 const STATUTS = ["OUVERT", "EN_COURS", "ESCALADE", "RESOLU", "CLOTURE"];
 const PRIORITES = ["P1_CRITIQUE", "P2_HAUTE", "P3_MOYENNE", "P4_BASSE"];
@@ -18,12 +20,24 @@ function severiteClass(severite) {
   return map[severite] ?? "";
 }
 
-// Normalise une réponse API qui peut être soit un tableau brut,
-// soit un objet {status, count, data: [...]} comme /incidents/.
 function normalizeList(payload) {
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.data)) return payload.data;
   return [];
+}
+
+// Utilise maintenant les vraies données de l'alerte source (valeur_mesuree,
+// seuil, type_alerte), renvoyées par /incidents/ depuis la jointure avec `alertes`.
+function buildPredictPayload(inc) {
+  return {
+    type_alerte: inc.type_alerte,
+    severite: inc.severite,
+    equipement: inc.code_equipement,
+    valeur_mesuree: inc.valeur_mesuree,
+    seuil: inc.seuil,
+    heure: new Date(inc.cree_le).getHours(),
+    jour_semaine: new Date(inc.cree_le).getDay(),
+  };
 }
 
 export default function Incidents() {
@@ -34,16 +48,20 @@ export default function Incidents() {
   const [prioriteFilter, setPrioriteFilter] = useState("");
   const [expandedRef, setExpandedRef] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mlResults, setMlResults] = useState({});
+  const [mlLoading, setMlLoading] = useState({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
 
+    let loadedIncidents = [];
     try {
       const incidentsData = await getIncidents({
         ...(statutFilter && { statut: statutFilter }),
         ...(prioriteFilter && { priorite: prioriteFilter }),
       });
-      setIncidents(normalizeList(incidentsData));
+      loadedIncidents = normalizeList(incidentsData);
+      setIncidents(loadedIncidents);
     } catch (err) {
       console.error("Erreur incidents", err);
     }
@@ -63,6 +81,21 @@ export default function Incidents() {
     }
 
     setLoading(false);
+
+    // Lance une prédiction ML pour chaque incident chargé, en parallèle.
+    loadedIncidents.forEach((inc) => {
+      setMlLoading((prev) => ({ ...prev, [inc.reference]: true }));
+      predictAnomaly(buildPredictPayload(inc))
+        .then((result) => {
+          setMlResults((prev) => ({ ...prev, [inc.reference]: result }));
+        })
+        .catch((err) => {
+          console.error("Erreur ML pour", inc.reference, err);
+        })
+        .finally(() => {
+          setMlLoading((prev) => ({ ...prev, [inc.reference]: false }));
+        });
+    });
   }, [statutFilter, prioriteFilter]);
 
   useEffect(() => {
@@ -127,16 +160,17 @@ export default function Incidents() {
               <th>Titre</th>
               <th>Priorité</th>
               <th>Score</th>
+              <th>ML</th>
               <th>Statut</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={6} className="cell-empty">chargement...</td></tr>
+              <tr><td colSpan={7} className="cell-empty">chargement...</td></tr>
             )}
             {!loading && incidents.length === 0 && (
-              <tr><td colSpan={6} className="cell-empty">aucun incident pour ces filtres</td></tr>
+              <tr><td colSpan={7} className="cell-empty">aucun incident pour ces filtres</td></tr>
             )}
             {incidents.map((inc) => (
               <>
@@ -149,6 +183,9 @@ export default function Incidents() {
                   <td>{inc.titre}</td>
                   <td><span className={`badge badge-${inc.priorite}`}>{inc.priorite}</span></td>
                   <td className="score-cell">{inc.score_criticite}</td>
+                  <td>
+                    <MLBadge result={mlResults[inc.reference]} loading={mlLoading[inc.reference]} />
+                  </td>
                   <td>
                     <select
                       className="select"
@@ -172,7 +209,7 @@ export default function Incidents() {
                 </tr>
                 {expandedRef === inc.reference && (
                   <tr className="detail-row">
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <p>
                         <span className="detail-label">cause probable</span>
                         {inc.cause_probable ?? "non renseignée"}
@@ -181,6 +218,12 @@ export default function Incidents() {
                         <span className="detail-label">action recommandée</span>
                         {inc.action_recommandee ?? "non renseignée"}
                       </p>
+                      {mlResults[inc.reference]?.status === "ok" && (
+                        <p style={{ marginTop: 4 }}>
+                          <span className="detail-label">score ML</span>
+                          {mlResults[inc.reference].score}
+                        </p>
+                      )}
                     </td>
                   </tr>
                 )}
