@@ -168,21 +168,7 @@ export default function Dashboard() {
         @keyframes fadeIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
       `}</style>
 
-      {/* TOPBAR */}
-      <div style={{ background: C.surface, borderBottom: `1px solid ${C.border}`, padding: "12px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <div style={{ width: "32px", height: "32px", background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", borderRadius: "8px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px" }}>📡</div>
-          <div>
-            <div style={{ fontWeight: "700", fontSize: "14px", letterSpacing: "-0.02em" }}>Copilote Télécom</div>
-            <div style={{ fontSize: "10px", color: C.muted }}>SOTETEL — Supervision NOC</div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px", background: "#0a1a0a", border: "1px solid #1a3a1a", borderRadius: "20px", padding: "3px 10px" }}>
-            <div style={{ width: "6px", height: "6px", background: C.success, borderRadius: "50%", animation: "pulse 2s infinite" }} />
-            <span style={{ fontSize: "10px", color: C.success, fontWeight: "600" }}>LIVE</span>
-          </div>
-        </div>
-        
-      </div>
+      
 
       <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
 

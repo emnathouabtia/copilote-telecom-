@@ -1,25 +1,54 @@
 import { useEffect, useState, useCallback } from "react";
-import KPICard from "../components/KPICard";
-import Chart from "../components/Chart";
-import LiveStatusDot from "../components/LiveStatusDot";
-import { getIncidents, updateIncidentStatus, escaladeIncident } from "../api/incidents";
-import { getKpis, getCategories } from "../api/dashboard";
+
+const C = {
+  bg: "#000000", surface: "#0a0a0a", surface2: "#111111",
+  border: "#1f1f1f", border2: "#2a2a2a",
+  accent: "#3b82f6", danger: "#ef4444", warning: "#f59e0b",
+  success: "#22c55e", purple: "#a78bfa",
+  text: "#e5e5e5", muted: "#525252", subtle: "#737373",
+};
 
 const STATUTS = ["OUVERT", "EN_COURS", "ESCALADE", "RESOLU", "CLOTURE"];
 const PRIORITES = ["P1_CRITIQUE", "P2_HAUTE", "P3_MOYENNE", "P4_BASSE"];
 
-function severiteClass(severite) {
-  const map = {
-    CRITIQUE: "severite-critique",
-    MAJEURE: "severite-majeure",
-    MINEURE: "severite-mineure",
-    INFO: "severite-info",
-  };
-  return map[severite] ?? "";
+function KPI({ label, value, color }) {
+  return (
+    <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "18px 20px", position: "relative", overflow: "hidden" }}>
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "2px", background: color }} />
+      <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.1em", marginBottom: "8px" }}>{label}</div>
+      <div style={{ fontSize: "30px", fontWeight: "700", color, lineHeight: 1 }}>{value ?? "—"}</div>
+    </div>
+  );
 }
 
-// Normalise une réponse API qui peut être soit un tableau brut,
-// soit un objet {status, count, data: [...]} comme /incidents/.
+function PriorityBadge({ value }) {
+  const map = {
+    P1_CRITIQUE: { color: C.danger, label: "P1 CRITIQUE" },
+    P2_HAUTE: { color: C.warning, label: "P2 HAUTE" },
+    P3_MOYENNE: { color: C.accent, label: "P3 MOYENNE" },
+    P4_BASSE: { color: C.muted, label: "P4 BASSE" },
+  };
+  const { color, label } = map[value] || { color: C.muted, label: value };
+  return (
+    <span style={{ background: color + "18", color, border: `1px solid ${color}30`, borderRadius: "6px", padding: "3px 10px", fontSize: "11px", fontWeight: "600" }}>
+      {label}
+    </span>
+  );
+}
+
+function StatutBadge({ value }) {
+  const map = {
+    OUVERT: C.danger, EN_COURS: C.warning,
+    ESCALADE: C.purple, RESOLU: C.success, CLOTURE: C.muted,
+  };
+  const color = map[value] || C.muted;
+  return (
+    <span style={{ background: color + "18", color, border: `1px solid ${color}30`, borderRadius: "6px", padding: "3px 10px", fontSize: "11px", fontWeight: "600" }}>
+      {value}
+    </span>
+  );
+}
+
 function normalizeList(payload) {
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.data)) return payload.data;
@@ -28,8 +57,7 @@ function normalizeList(payload) {
 
 export default function Incidents() {
   const [incidents, setIncidents] = useState([]);
-  const [kpis, setKpis] = useState(null);
-  const [categories, setCategories] = useState([]);
+  const [kpi, setKpi] = useState(null);
   const [statutFilter, setStatutFilter] = useState("");
   const [prioriteFilter, setPrioriteFilter] = useState("");
   const [expandedRef, setExpandedRef] = useState(null);
@@ -37,158 +65,147 @@ export default function Incidents() {
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (statutFilter) params.append("statut", statutFilter);
+      if (prioriteFilter) params.append("priorite", prioriteFilter);
+      const res = await fetch(`http://localhost:8000/incidents/?${params}`);
+      const data = await res.json();
+      setIncidents(normalizeList(data));
+    } catch (err) { console.error(err); }
 
     try {
-      const incidentsData = await getIncidents({
-        ...(statutFilter && { statut: statutFilter }),
-        ...(prioriteFilter && { priorite: prioriteFilter }),
-      });
-      setIncidents(normalizeList(incidentsData));
-    } catch (err) {
-      console.error("Erreur incidents", err);
-    }
-
-    try {
-      const kpisData = await getKpis();
-      setKpis(kpisData.data ?? kpisData);
-    } catch (err) {
-      console.error("Erreur KPIs", err);
-    }
-
-    try {
-      const categoriesData = await getCategories();
-      setCategories(normalizeList(categoriesData));
-    } catch (err) {
-      console.error("Erreur catégories", err);
-    }
+      const res = await fetch("http://localhost:8000/dashboard/kpi");
+      const data = await res.json();
+      setKpi(data.data);
+    } catch (err) { console.error(err); }
 
     setLoading(false);
   }, [statutFilter, prioriteFilter]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const handleStatutChange = async (reference, statut) => {
-    await updateIncidentStatus(reference, statut);
-    loadData();
-  };
-
-  const handleEscalade = async (reference) => {
-    await escaladeIncident(reference);
-    loadData();
-  };
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
-    <div className="page">
-      <header className="page-header">
-        <div>
-          <h1 className="page-title">Supervision — Incidents</h1>
-          <p className="page-subtitle">Copilote intelligent de supervision télécom</p>
+    <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', 'Segoe UI', sans-serif", color: C.text }}>
+
+      <style>{`
+        * { box-sizing: border-box; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 2px; }
+        select option { background: #111; color: #e5e5e5; }
+      `}</style>
+
+      
+
+      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
+
+        {/* KPI */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px" }}>
+          <KPI label="Alertes actives" value={kpi?.alertes_actives} color={C.danger} />
+          <KPI label="Critiques" value={kpi?.critiques} color={C.danger} />
+          <KPI label="Incidents actifs" value={kpi?.incidents_actifs} color={C.warning} />
+          <KPI label="Résolus 24h" value={kpi?.resolus_24h} color={C.success} />
         </div>
-        <LiveStatusDot connected={true} />
-      </header>
 
-      <section className="kpi-grid">
-        <KPICard label="Alertes actives" value={kpis?.alertes_actives ?? "—"} tone="neutral" />
-        <KPICard label="Critiques" value={kpis?.critiques ?? "—"} tone="critical" />
-        <KPICard label="Incidents actifs" value={kpis?.incidents_actifs ?? "—"} tone="warning" />
-        <KPICard label="Résolus (24h)" value={kpis?.resolus_24h ?? "—"} tone="success" />
-      </section>
+        {/* FILTRES */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 20px", display: "flex", gap: "12px", alignItems: "center" }}>
+          <span style={{ fontSize: "11px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Filtres</span>
 
-      <section className="panel">
-        <h2 className="panel-title">Répartition par catégorie</h2>
-        <Chart type="bar" data={categories} dataKey="total" nameKey="categorie" />
-      </section>
+          <select value={statutFilter} onChange={e => setStatutFilter(e.target.value)}
+            style={{ background: C.surface2, border: `1px solid ${C.border2}`, color: C.text, borderRadius: "8px", padding: "8px 12px", fontSize: "12px", outline: "none", cursor: "pointer" }}>
+            <option value="">Tous les statuts</option>
+            {STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
 
-      <section className="filters">
-        <select className="select" value={statutFilter} onChange={(e) => setStatutFilter(e.target.value)}>
-          <option value="">tous les statuts</option>
-          {STATUTS.map((s) => (
-            <option key={s} value={s}>{s}</option>
-          ))}
-        </select>
+          <select value={prioriteFilter} onChange={e => setPrioriteFilter(e.target.value)}
+            style={{ background: C.surface2, border: `1px solid ${C.border2}`, color: C.text, borderRadius: "8px", padding: "8px 12px", fontSize: "12px", outline: "none", cursor: "pointer" }}>
+            <option value="">Toutes priorités</option>
+            {PRIORITES.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
 
-        <select className="select" value={prioriteFilter} onChange={(e) => setPrioriteFilter(e.target.value)}>
-          <option value="">toutes priorités</option>
-          {PRIORITES.map((p) => (
-            <option key={p} value={p}>{p}</option>
-          ))}
-        </select>
+          <button onClick={loadData}
+            style={{ background: "#1a1a2e", border: `1px solid ${C.accent}30`, color: C.accent, borderRadius: "8px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", fontWeight: "500" }}>
+            Actualiser
+          </button>
 
-        <button className="btn btn-refresh" onClick={loadData}>actualiser</button>
-      </section>
+          <span style={{ marginLeft: "auto", fontSize: "11px", color: C.muted }}>
+            {incidents.length} incident(s) trouvé(s)
+          </span>
+        </div>
 
-      <section className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Référence</th>
-              <th>Titre</th>
-              <th>Priorité</th>
-              <th>Score</th>
-              <th>Statut</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={6} className="cell-empty">chargement...</td></tr>
-            )}
-            {!loading && incidents.length === 0 && (
-              <tr><td colSpan={6} className="cell-empty">aucun incident pour ces filtres</td></tr>
-            )}
-            {incidents.map((inc) => (
-              <>
-                <tr
-                  key={inc.reference}
-                  onClick={() => setExpandedRef(expandedRef === inc.reference ? null : inc.reference)}
-                  className={severiteClass(inc.severite)}
-                >
-                  <td className="ref-cell">{inc.reference}</td>
-                  <td>{inc.titre}</td>
-                  <td><span className={`badge badge-${inc.priorite}`}>{inc.priorite}</span></td>
-                  <td className="score-cell">{inc.score_criticite}</td>
-                  <td>
-                    <select
-                      className="select"
-                      value={inc.statut}
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => handleStatutChange(inc.reference, e.target.value)}
-                    >
-                      {STATUTS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button
-                      className="btn-link"
-                      onClick={(e) => { e.stopPropagation(); handleEscalade(inc.reference); }}
-                    >
-                      escalader
-                    </button>
-                  </td>
-                </tr>
-                {expandedRef === inc.reference && (
-                  <tr className="detail-row">
-                    <td colSpan={6}>
-                      <p>
-                        <span className="detail-label">cause probable</span>
-                        {inc.cause_probable ?? "non renseignée"}
-                      </p>
-                      <p style={{ marginTop: 4 }}>
-                        <span className="detail-label">action recommandée</span>
-                        {inc.action_recommandee ?? "non renseignée"}
-                      </p>
+        {/* TABLEAU INCIDENTS */}
+        <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden" }}>
+          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <span style={{ fontSize: "12px", fontWeight: "600" }}>Liste des incidents</span>
+            <span style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Triés par score décroissant</span>
+          </div>
+
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
+            <thead>
+              <tr style={{ borderBottom: `1px solid ${C.border}` }}>
+                {["Référence", "Titre", "Priorité", "Sévérité", "Score", "Statut", "Actions"].map(h => (
+                  <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: C.muted, fontWeight: "500", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Chargement...</td></tr>
+              )}
+              {!loading && incidents.length === 0 && (
+                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Aucun incident pour ces filtres</td></tr>
+              )}
+              {incidents.map((inc) => (
+                <>
+                  <tr key={inc.reference}
+                    onClick={() => setExpandedRef(expandedRef === inc.reference ? null : inc.reference)}
+                    style={{ borderBottom: `1px solid ${C.border}`, cursor: "pointer", transition: "background 0.15s", background: expandedRef === inc.reference ? "#0a0a0a" : "transparent" }}
+                    onMouseEnter={e => e.currentTarget.style.background = "#0a0a0a"}
+                    onMouseLeave={e => e.currentTarget.style.background = expandedRef === inc.reference ? "#0a0a0a" : "transparent"}>
+                    <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px", color: C.accent }}>{inc.reference}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: "500", color: C.text, maxWidth: "280px" }}>{inc.titre}</td>
+                    <td style={{ padding: "12px 16px" }}><PriorityBadge value={inc.priorite} /></td>
+                    <td style={{ padding: "12px 16px" }}>
+                      <span style={{ color: inc.severite === "CRITIQUE" ? C.danger : inc.severite === "MAJEURE" ? C.warning : C.accent, fontWeight: "600", fontSize: "12px" }}>
+                        {inc.severite}
+                      </span>
+                    </td>
+                    <td style={{ padding: "12px 16px", fontVariantNumeric: "tabular-nums", color: inc.score_criticite > 70 ? C.danger : inc.score_criticite > 40 ? C.warning : C.success, fontWeight: "600" }}>
+                      {inc.score_criticite}
+                    </td>
+                    <td style={{ padding: "12px 16px" }}><StatutBadge value={inc.statut} /></td>
+                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                      <span style={{ fontSize: "10px", color: C.muted }}>{expandedRef === inc.reference ? "▲ fermer" : "▼ détails"}</span>
                     </td>
                   </tr>
-                )}
-              </>
-            ))}
-          </tbody>
-        </table>
-      </section>
+                  {expandedRef === inc.reference && (
+                    <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#050505" }}>
+                      <td colSpan={7} style={{ padding: "16px 20px" }}>
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "12px 16px" }}>
+                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>Cause probable</div>
+                            <div style={{ fontSize: "13px", color: C.text, lineHeight: "1.6" }}>{inc.cause_probable || "Non renseignée"}</div>
+                          </div>
+                          <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "12px 16px" }}>
+                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>Action recommandée</div>
+                            <div style={{ fontSize: "13px", color: C.text, lineHeight: "1.6" }}>{inc.action_recommandee || "Non renseignée"}</div>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
+                          <span style={{ fontSize: "11px", color: C.muted }}>Créé le : {inc.cree_le ? new Date(inc.cree_le).toLocaleString("fr-FR") : "—"}</span>
+                          {inc.nom_equipement && <span style={{ fontSize: "11px", color: C.muted }}>· Équipement : {inc.nom_equipement}</span>}
+                          {inc.nom_site && <span style={{ fontSize: "11px", color: C.muted }}>· Site : {inc.nom_site}</span>}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
