@@ -21,14 +21,19 @@ def get_incidents(
             i.priorite,
             i.statut,
             i.categorie,
+            i.severite,
             i.cree_le,
             i.date_resolution,
             e.nom_equipement,
             e.code_equipement,
-            s.nom_site
+            s.nom_site,
+            a.valeur_mesuree,
+            a.seuil,
+            a.type_alerte
         FROM incidents i
         LEFT JOIN equipements e ON i.equipement_id = e.id
         LEFT JOIN sites s ON e.site_id = s.id
+        LEFT JOIN alertes a ON a.id = i.alerte_source_id
         WHERE 1=1
     """
     params = {}
@@ -55,10 +60,12 @@ def get_incidents(
 @router.get("/{incident_id}")
 def get_incident(incident_id: str, db: Session = Depends(get_db)):
     result = db.execute(text("""
-        SELECT i.*, e.nom_equipement, s.nom_site
+        SELECT i.*, e.nom_equipement, s.nom_site,
+               a.valeur_mesuree, a.seuil, a.type_alerte
         FROM incidents i
         LEFT JOIN equipements e ON i.equipement_id = e.id
         LEFT JOIN sites s ON e.site_id = s.id
+        LEFT JOIN alertes a ON a.id = i.alerte_source_id
         WHERE i.id = :id
     """), {"id": incident_id}).fetchone()
 

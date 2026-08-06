@@ -49,6 +49,18 @@ function StatutBadge({ value }) {
   );
 }
 
+function MLBadge({ result, loading }) {
+  if (loading) return <span style={{ color: C.muted, fontSize: "11px" }}>...</span>;
+  if (!result) return null;
+  const map = { ANOMALIE: C.danger, SUSPECT: C.warning, NORMAL: C.success };
+  const color = map[result.label] || C.muted;
+  return (
+    <span style={{ background: color + "18", color, border: `1px solid ${color}30`, borderRadius: "6px", padding: "3px 8px", fontSize: "11px", fontWeight: "600" }}>
+      {result.label}
+    </span>
+  );
+}
+
 function normalizeList(payload) {
   if (Array.isArray(payload)) return payload;
   if (payload && Array.isArray(payload.data)) return payload.data;
@@ -62,16 +74,21 @@ export default function Incidents() {
   const [prioriteFilter, setPrioriteFilter] = useState("");
   const [expandedRef, setExpandedRef] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [mlResults, setMlResults] = useState({});
+  const [mlLoading, setMlLoading] = useState({});
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    let loadedIncidents = [];
+
     try {
       const params = new URLSearchParams();
       if (statutFilter) params.append("statut", statutFilter);
       if (prioriteFilter) params.append("priorite", prioriteFilter);
       const res = await fetch(`http://localhost:8000/incidents/?${params}`);
       const data = await res.json();
-      setIncidents(normalizeList(data));
+      loadedIncidents = normalizeList(data);
+      setIncidents(loadedIncidents);
     } catch (err) { console.error(err); }
 
     try {
@@ -81,13 +98,35 @@ export default function Incidents() {
     } catch (err) { console.error(err); }
 
     setLoading(false);
+
+    // Prédiction ML pour chaque incident
+    loadedIncidents.forEach((inc) => {
+      if (!inc.reference) return;
+      setMlLoading(prev => ({ ...prev, [inc.reference]: true }));
+      fetch("http://localhost:8000/predict/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type_alerte: inc.type_alerte || "CPU_HIGH",
+          severite: inc.severite || "MINEURE",
+          equipement: inc.code_equipement || "TUN-RTR-CORE-01",
+          valeur_mesuree: inc.valeur_mesuree || 0,
+          seuil: inc.seuil || 85,
+          heure: new Date(inc.cree_le).getHours(),
+          jour_semaine: new Date(inc.cree_le).getDay(),
+        })
+      })
+        .then(r => r.json())
+        .then(result => setMlResults(prev => ({ ...prev, [inc.reference]: result })))
+        .catch(err => console.error("ML error", err))
+        .finally(() => setMlLoading(prev => ({ ...prev, [inc.reference]: false })));
+    });
   }, [statutFilter, prioriteFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", fontFamily: "'Inter', 'Segoe UI', sans-serif", color: C.text }}>
-
       <style>{`
         * { box-sizing: border-box; }
         ::-webkit-scrollbar { width: 4px; }
@@ -96,10 +135,7 @@ export default function Incidents() {
         select option { background: #111; color: #e5e5e5; }
       `}</style>
 
-      
-
       <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
-
         {/* KPI */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: "12px" }}>
           <KPI label="Alertes actives" value={kpi?.alertes_actives} color={C.danger} />
@@ -111,92 +147,77 @@ export default function Incidents() {
         {/* FILTRES */}
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", padding: "14px 20px", display: "flex", gap: "12px", alignItems: "center" }}>
           <span style={{ fontSize: "11px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Filtres</span>
-
           <select value={statutFilter} onChange={e => setStatutFilter(e.target.value)}
             style={{ background: C.surface2, border: `1px solid ${C.border2}`, color: C.text, borderRadius: "8px", padding: "8px 12px", fontSize: "12px", outline: "none", cursor: "pointer" }}>
             <option value="">Tous les statuts</option>
             {STATUTS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
-
           <select value={prioriteFilter} onChange={e => setPrioriteFilter(e.target.value)}
             style={{ background: C.surface2, border: `1px solid ${C.border2}`, color: C.text, borderRadius: "8px", padding: "8px 12px", fontSize: "12px", outline: "none", cursor: "pointer" }}>
             <option value="">Toutes priorités</option>
             {PRIORITES.map(p => <option key={p} value={p}>{p}</option>)}
           </select>
-
           <button onClick={loadData}
             style={{ background: "#1a1a2e", border: `1px solid ${C.accent}30`, color: C.accent, borderRadius: "8px", padding: "8px 16px", fontSize: "12px", cursor: "pointer", fontWeight: "500" }}>
             Actualiser
           </button>
-
-          <span style={{ marginLeft: "auto", fontSize: "11px", color: C.muted }}>
-            {incidents.length} incident(s) trouvé(s)
-          </span>
+          <span style={{ marginLeft: "auto", fontSize: "11px", color: C.muted }}>{incidents.length} incident(s)</span>
         </div>
 
-        {/* TABLEAU INCIDENTS */}
+        {/* TABLEAU */}
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "12px", overflow: "hidden" }}>
-          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ padding: "12px 20px", borderBottom: `1px solid ${C.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <span style={{ fontSize: "12px", fontWeight: "600" }}>Liste des incidents</span>
-            <span style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em" }}>Triés par score décroissant</span>
+            <span style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase" }}>Triés par score décroissant</span>
           </div>
-
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "13px" }}>
             <thead>
               <tr style={{ borderBottom: `1px solid ${C.border}` }}>
-                {["Référence", "Titre", "Priorité", "Sévérité", "Score", "Statut", "Actions"].map(h => (
+                {["Référence", "Titre", "Priorité", "Sévérité", "Score", "ML", "Statut", "Détails"].map(h => (
                   <th key={h} style={{ padding: "10px 16px", textAlign: "left", color: C.muted, fontWeight: "500", fontSize: "10px", textTransform: "uppercase", letterSpacing: "0.06em" }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {loading && (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Chargement...</td></tr>
-              )}
-              {!loading && incidents.length === 0 && (
-                <tr><td colSpan={7} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Aucun incident pour ces filtres</td></tr>
-              )}
+              {loading && <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Chargement...</td></tr>}
+              {!loading && incidents.length === 0 && <tr><td colSpan={8} style={{ padding: "40px", textAlign: "center", color: C.muted }}>Aucun incident</td></tr>}
               {incidents.map((inc) => (
                 <>
                   <tr key={inc.reference}
                     onClick={() => setExpandedRef(expandedRef === inc.reference ? null : inc.reference)}
-                    style={{ borderBottom: `1px solid ${C.border}`, cursor: "pointer", transition: "background 0.15s", background: expandedRef === inc.reference ? "#0a0a0a" : "transparent" }}
+                    style={{ borderBottom: `1px solid ${C.border}`, cursor: "pointer", background: expandedRef === inc.reference ? "#0a0a0a" : "transparent" }}
                     onMouseEnter={e => e.currentTarget.style.background = "#0a0a0a"}
                     onMouseLeave={e => e.currentTarget.style.background = expandedRef === inc.reference ? "#0a0a0a" : "transparent"}>
                     <td style={{ padding: "12px 16px", fontFamily: "monospace", fontSize: "12px", color: C.accent }}>{inc.reference}</td>
-                    <td style={{ padding: "12px 16px", fontWeight: "500", color: C.text, maxWidth: "280px" }}>{inc.titre}</td>
+                    <td style={{ padding: "12px 16px", fontWeight: "500", color: C.text }}>{inc.titre}</td>
                     <td style={{ padding: "12px 16px" }}><PriorityBadge value={inc.priorite} /></td>
                     <td style={{ padding: "12px 16px" }}>
-                      <span style={{ color: inc.severite === "CRITIQUE" ? C.danger : inc.severite === "MAJEURE" ? C.warning : C.accent, fontWeight: "600", fontSize: "12px" }}>
-                        {inc.severite}
-                      </span>
+                      <span style={{ color: inc.severite === "CRITIQUE" ? C.danger : inc.severite === "MAJEURE" ? C.warning : C.accent, fontWeight: "600", fontSize: "12px" }}>{inc.severite}</span>
                     </td>
-                    <td style={{ padding: "12px 16px", fontVariantNumeric: "tabular-nums", color: inc.score_criticite > 70 ? C.danger : inc.score_criticite > 40 ? C.warning : C.success, fontWeight: "600" }}>
-                      {inc.score_criticite}
-                    </td>
+                    <td style={{ padding: "12px 16px", color: inc.score_criticite > 70 ? C.danger : inc.score_criticite > 40 ? C.warning : C.success, fontWeight: "600" }}>{inc.score_criticite}</td>
+                    <td style={{ padding: "12px 16px" }}><MLBadge result={mlResults[inc.reference]} loading={mlLoading[inc.reference]} /></td>
                     <td style={{ padding: "12px 16px" }}><StatutBadge value={inc.statut} /></td>
-                    <td style={{ padding: "12px 16px", textAlign: "right" }}>
-                      <span style={{ fontSize: "10px", color: C.muted }}>{expandedRef === inc.reference ? "▲ fermer" : "▼ détails"}</span>
-                    </td>
+                    <td style={{ padding: "12px 16px", textAlign: "right", fontSize: "10px", color: C.muted }}>{expandedRef === inc.reference ? "▲ fermer" : "▼ détails"}</td>
                   </tr>
                   {expandedRef === inc.reference && (
                     <tr style={{ borderBottom: `1px solid ${C.border}`, background: "#050505" }}>
-                      <td colSpan={7} style={{ padding: "16px 20px" }}>
+                      <td colSpan={8} style={{ padding: "16px 20px" }}>
                         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
                           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "12px 16px" }}>
-                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>Cause probable</div>
-                            <div style={{ fontSize: "13px", color: C.text, lineHeight: "1.6" }}>{inc.cause_probable || "Non renseignée"}</div>
+                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", marginBottom: "6px" }}>Cause probable</div>
+                            <div style={{ fontSize: "13px", lineHeight: "1.6" }}>{inc.cause_probable || "Non renseignée"}</div>
                           </div>
                           <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "8px", padding: "12px 16px" }}>
-                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px" }}>Action recommandée</div>
-                            <div style={{ fontSize: "13px", color: C.text, lineHeight: "1.6" }}>{inc.action_recommandee || "Non renseignée"}</div>
+                            <div style={{ fontSize: "10px", color: C.muted, textTransform: "uppercase", marginBottom: "6px" }}>Action recommandée</div>
+                            <div style={{ fontSize: "13px", lineHeight: "1.6" }}>{inc.action_recommandee || "Non renseignée"}</div>
                           </div>
                         </div>
-                        <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-                          <span style={{ fontSize: "11px", color: C.muted }}>Créé le : {inc.cree_le ? new Date(inc.cree_le).toLocaleString("fr-FR") : "—"}</span>
-                          {inc.nom_equipement && <span style={{ fontSize: "11px", color: C.muted }}>· Équipement : {inc.nom_equipement}</span>}
-                          {inc.nom_site && <span style={{ fontSize: "11px", color: C.muted }}>· Site : {inc.nom_site}</span>}
-                        </div>
+                        {mlResults[inc.reference] && (
+                          <div style={{ marginTop: "10px", fontSize: "11px", color: C.muted }}>
+                            Score ML : <span style={{ fontWeight: "600", color: C.text }}>{mlResults[inc.reference].score}</span> —
+                            Label : <span style={{ fontWeight: "600", color: C.text }}>{mlResults[inc.reference].label}</span>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   )}
