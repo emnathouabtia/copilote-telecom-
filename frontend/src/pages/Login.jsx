@@ -7,57 +7,57 @@ const C = {
   text: "#e5e5e5", muted: "#525252",
 };
 
-const USERS = {
-  "emna": "emna123",
-  "doaa": "doaa123",
-  "admin": "admin123",
-};
-
 export default function Login({ onLogin }) {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
- const handleSubmit = () => {
-  setError("");
-  if (!username || !password) {
-    setError("Remplissez tous les champs");
-    return;
-  }
-  if (USERS[username] === password) {
-    try {
-      localStorage.setItem("copilote_user", username);
-    } catch(e) {
-      console.log("localStorage error:", e);
+  const handleSubmit = async () => {
+    setError("");
+    if (!email || !password) {
+      setError("Remplissez tous les champs");
+      return;
     }
-    onLogin(username);
-  } else {
-    setError("Identifiants incorrects");
-  }
-};
+    setLoading(true);
+    try {
+      const res = await fetch("http://localhost:8000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (data.status === "ok") {
+        onLogin(data.user);
+      } else {
+        setError(data.message);
+      }
+    } catch {
+      setError("Erreur de connexion au serveur");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div style={{ background: C.bg, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Inter', sans-serif" }}>
       <div style={{ width: "100%", maxWidth: "400px", padding: "0 24px" }}>
 
-        {/* Logo */}
         <div style={{ textAlign: "center", marginBottom: "40px" }}>
           <div style={{ width: "56px", height: "56px", background: "linear-gradient(135deg, #3b82f6, #1d4ed8)", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", margin: "0 auto 16px" }}>📡</div>
           <div style={{ fontSize: "22px", fontWeight: "700", color: C.text, letterSpacing: "-0.03em" }}>Copilote Télécom</div>
           <div style={{ fontSize: "13px", color: C.muted, marginTop: "4px" }}>SOTETEL — Supervision NOC</div>
         </div>
 
-        {/* Card */}
         <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: "16px", padding: "32px" }}>
           <div style={{ fontSize: "16px", fontWeight: "600", color: C.text, marginBottom: "24px" }}>Connexion</div>
 
           <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
             <div>
-              <label style={{ fontSize: "11px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px", display: "block" }}>Identifiant</label>
-              <input value={username} onChange={e => setUsername(e.target.value)}
+              <label style={{ fontSize: "11px", color: C.muted, textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "6px", display: "block" }}>Email</label>
+              <input value={email} onChange={e => setEmail(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleSubmit()}
-                placeholder="emna, doaa ou admin"
+                placeholder="votre@email.com"
                 style={{ width: "100%", padding: "10px 14px", background: C.surface2, border: `1px solid ${C.border2}`, color: C.text, borderRadius: "8px", fontSize: "13px", outline: "none" }}
               />
             </div>
@@ -78,16 +78,14 @@ export default function Login({ onLogin }) {
             )}
 
             <button onClick={handleSubmit} disabled={loading}
-              style={{ width: "100%", padding: "12px", background: loading ? "#1a1a2e" : "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "white", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "600", cursor: loading ? "default" : "pointer", marginTop: "8px", transition: "all 0.2s" }}>
+              style={{ width: "100%", padding: "12px", background: loading ? "#1a1a2e" : "linear-gradient(135deg, #3b82f6, #1d4ed8)", color: "white", border: "none", borderRadius: "8px", fontSize: "14px", fontWeight: "600", cursor: loading ? "default" : "pointer", marginTop: "8px" }}>
               {loading ? "Connexion..." : "Se connecter"}
             </button>
           </div>
-
-          
         </div>
 
         <div style={{ textAlign: "center", marginTop: "24px", fontSize: "11px", color: C.muted }}>
-                  SOTETEL Tunisie
+          ENICarthage — Stage 2025 · SOTETEL Tunisie
         </div>
       </div>
     </div>

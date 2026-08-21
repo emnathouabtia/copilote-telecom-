@@ -3,7 +3,8 @@ import { useState } from "react";
 import Incidents from "./pages/Incidents.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import Login from "./pages/Login.jsx";
-
+import Stats from "./pages/Stats.jsx";
+import Topology from "./pages/Topology.jsx";
 const C = {
   bg: "#000000", surface: "#0a0a0a", border: "#1f1f1f",
   accent: "#3b82f6", text: "#e5e5e5", muted: "#525252",
@@ -45,7 +46,7 @@ function Navbar({ onLogout, user }) {
       </div>
 
       <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-        <span style={{ fontSize: "12px", color: C.muted }}>👤 {user}</span>
+        <span style={{ fontSize: "12px", color: C.muted }}>👤 {user?.nom_complet}</span>
         <button onClick={onLogout} style={{
           background: "transparent", border: `1px solid ${C.border}`,
           color: C.muted, borderRadius: "8px", padding: "6px 12px",
@@ -64,16 +65,17 @@ function PrivateRoute({ children, isAuth }) {
 
 export default function App() {
   const [isAuth, setIsAuth] = useState(false);
-  const [user, setUser] = useState("");
+  const [user, setUser] = useState(null);
+  const [role, setRole] = useState("");
 
-  const handleLogin = (username) => {
-    setUser(username);
+  const handleLogin = (userData) => {
+    setUser(userData);
     setIsAuth(true);
   };
 
   const handleLogout = () => {
     setIsAuth(false);
-    setUser("");
+    setUser(null);
   };
 
   if (!isAuth) {
@@ -86,8 +88,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/incidents" element={<Incidents />} />
-        <Route path="/stats" element={<div style={{ padding: "40px", color: "#e5e5e5", textAlign: "center" }}>Page Statistiques — en cours</div>} />
-        <Route path="/topology" element={<div style={{ padding: "40px", color: "#e5e5e5", textAlign: "center" }}>Page Topologie — en cours</div>} />
+        <Route path="/stats" element={<Stats />} />
+        <Route path="/topology" element={<Topology />} />
       </Routes>
     </BrowserRouter>
   );
