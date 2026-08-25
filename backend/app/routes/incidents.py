@@ -16,24 +16,24 @@ def get_incidents(
     query = """
         SELECT
             i.id,
+            i.reference,
             i.titre,
             i.description,
             i.priorite,
             i.statut,
-            i.categorie,
             i.severite,
-            i.cree_le,
+            i.score_criticite,
+            i.cause_probable,
+            i.action_recommandee,
+            i.categorie,
+            i.date_creation,
             i.date_resolution,
             e.nom_equipement,
             e.code_equipement,
-            s.nom_site,
-            a.valeur_mesuree,
-            a.seuil,
-            a.type_alerte
+            s.nom_site
         FROM incidents i
         LEFT JOIN equipements e ON i.equipement_id = e.id
         LEFT JOIN sites s ON e.site_id = s.id
-        LEFT JOIN alertes a ON a.id = i.alerte_source_id
         WHERE 1=1
     """
     params = {}
@@ -46,11 +46,10 @@ def get_incidents(
         query += " AND i.statut = :statut"
         params["statut"] = statut
 
-    query += " ORDER BY i.cree_le DESC LIMIT :limit"
+    query += " ORDER BY i.score_criticite DESC LIMIT :limit"
     params["limit"] = limit
 
     result = db.execute(text(query), params).fetchall()
-
     return {
         "status": "ok",
         "count": len(result),
@@ -60,12 +59,10 @@ def get_incidents(
 @router.get("/{incident_id}")
 def get_incident(incident_id: str, db: Session = Depends(get_db)):
     result = db.execute(text("""
-        SELECT i.*, e.nom_equipement, s.nom_site,
-               a.valeur_mesuree, a.seuil, a.type_alerte
+        SELECT i.*, e.nom_equipement, s.nom_site
         FROM incidents i
         LEFT JOIN equipements e ON i.equipement_id = e.id
         LEFT JOIN sites s ON e.site_id = s.id
-        LEFT JOIN alertes a ON a.id = i.alerte_source_id
         WHERE i.id = :id
     """), {"id": incident_id}).fetchone()
 
@@ -73,3 +70,21 @@ def get_incident(incident_id: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Incident introuvable")
 
     return {"status": "ok", "data": dict(result._mapping)}
+
+@router.patch("/{incident_id}/statut")
+def update_statut(incident_id: str, data: dict, db: Session = Depends(get_db)):
+    nouveau_statut = data.get("statut")
+    if not nouveau_statut:
+        return {"status": "error", "message": "Statut manquant"}
+
+    db.execute(text("""
+        UPDATE incidents SET statut = :statut WHERE id = :id
+    """), {"statut": nouveau_statut, "id": incident_id})
+    db.commit()
+    return {"status": "ok", "message": f"Statut mis a jour : {nouveau_statut}"}
+
+@router.delete("/{incident_id}")
+def delete_incident(incident_id: str, db: Session = Depends(get_db)):
+    db.execute(text("DELETE FROM incidents WHERE id = :id"), {"id": incident_id})
+    db.commit()
+    return {"status": "ok", "message": "Incident supprime"}
