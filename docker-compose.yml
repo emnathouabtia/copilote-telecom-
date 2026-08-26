@@ -1,14 +1,39 @@
 services:
+
   backend:
     build: ../backend
     container_name: copilote_backend
     ports:
       - "8000:8000"
     environment:
-      DB_HOST: host.docker.internal
-      DB_PORT: 5436
+      DB_HOST: postgres
+      DB_PORT: 5432
       DB_NAME: copilote_supervision
       DB_USER: origin
       DB_PASSWORD: origin
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      - postgres
+
+  frontend:
+    build: ../frontend
+    container_name: copilote_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: copilote_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: copilote_supervision
+      POSTGRES_USER: origin
+      POSTGRES_PASSWORD: origin
+    ports:
+      - "5436:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
