@@ -5,7 +5,7 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Login from "./pages/Login.jsx";
 import Stats from "./pages/Stats.jsx";
 import Topology from "./pages/Topology.jsx";
-
+import Admin from "./pages/Admin.jsx";
 const C = {
   bg: "#000000", surface: "#0a0a0a", border: "#1f1f1f",
   accent: "#3b82f6", text: "#e5e5e5", muted: "#525252", subtle: "#737373",
@@ -123,7 +123,8 @@ export default function App() {
             <Route path="/incidents" element={<Incidents role={role} />} />
             <Route path="/topology" element={<Topology />} />
             <Route path="/stats" element={role === "TECHNICIEN" ? <AccesRefuse /> : <Stats />} />
-            <Route path="/admin" element={role !== "ADMIN" ? <AccesRefuse /> : <div style={{ padding: "40px", color: "#e5e5e5" }}>Page Administration — en cours</div>} />
+            <Route path="/admin" element={role !== "ADMIN" ? <AccesRefuse /> : <Admin />} />
+            
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </div>
