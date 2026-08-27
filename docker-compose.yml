@@ -1,14 +1,73 @@
 services:
+
+  db:
+    image: postgres:16
+    container_name: copilote_postgres
+    environment:
+      POSTGRES_DB: copilote_supervision
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../docs/01_schema_postgresql.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ../docs/02_seed_postgresql.sql:/docker-entrypoint-initdb.d/02_seed.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: copilote_redis
+    ports:
+      - "6379:6379"
+
   backend:
     build: ../backend
     container_name: copilote_backend
     ports:
       - "8000:8000"
     environment:
-      DB_HOST: host.docker.internal
-      DB_PORT: 5436
-      DB_NAME: copilote_supervision
-      DB_USER: origin
-      DB_PASSWORD: origin
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/copilote_supervision
+      REDIS_URL: redis://redis:6379
+      GROQ_API_KEY: ${GROQ_API_KEY}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ../ml/models:/app/ml/models
+      - ../backend/chroma_db:/app/chroma_db
+
+  frontend:
+    build: ../frontend
+    container_name: copilote_frontend
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: copilote_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: copilote_grafana
+    ports:
+      - "3001:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
