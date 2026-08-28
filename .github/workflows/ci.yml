@@ -43,6 +43,8 @@ jobs:
         env:
           PGPASSWORD: postgres
         run: |
+          psql -h localhost -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
+          psql -h localhost -U postgres -c "CREATE DATABASE copilote_supervision;" || true
           psql -h localhost -U postgres -d copilote_supervision -f docs/01_schema_postgresql.sql
           psql -h localhost -U postgres -d copilote_supervision -f docs/02_seed_postgresql.sql
 
