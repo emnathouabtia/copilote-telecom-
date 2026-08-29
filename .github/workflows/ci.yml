@@ -14,7 +14,7 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: copilote_supervision
+          POSTGRES_DB: postgres
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
@@ -35,24 +35,23 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd backend
-          pip install -r requirements.txt
+          pip install -r backend/requirements.txt
           pip install pytest httpx
 
       - name: Set up database
         env:
           PGPASSWORD: postgres
         run: |
-          psql -h localhost -U postgres -c "ALTER USER postgres PASSWORD 'postgres';"
-          psql -h localhost -U postgres -c "CREATE DATABASE copilote_supervision;" || true
-          psql -h localhost -U postgres -d copilote_supervision -f docs/01_schema_postgresql.sql
-          psql -h localhost -U postgres -d copilote_supervision -f docs/02_seed_postgresql.sql
+          psql -h localhost -U postgres -c "CREATE DATABASE copilote_supervision;"
+          psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/01_schema_postgresql.sql
+          psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/02_seed_postgresql.sql
 
       - name: Run tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/copilote_supervision
           REDIS_URL: redis://localhost:6379
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          SECRET_KEY: test-secret-key
         run: |
           cd backend
           python -m pytest tests/test_api.py -v
@@ -62,6 +61,11 @@ jobs:
     needs: test-backend
     steps:
       - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
 
       - name: Check frontend build
         run: |
