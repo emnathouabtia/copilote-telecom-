@@ -39,12 +39,14 @@ jobs:
           pip install pytest httpx
 
       - name: Set up database
-        env:
-          PGPASSWORD: postgres
-        run: |
-          psql -h localhost -U postgres -c "CREATE DATABASE copilote_supervision;"
-          psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/01_schema_postgresql.sql
-          psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/02_seed_postgresql.sql
+  env:
+    PGPASSWORD: postgres
+  run: |
+    psql -h localhost -U postgres -c "CREATE DATABASE copilote_supervision;"
+    psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/01_schema_postgresql.sql
+    psql -h localhost -U postgres -d copilote_supervision -f ${{ github.workspace }}/docs/02_seed_postgresql.sql
+    psql -h localhost -U postgres -d copilote_supervision -c "ALTER TABLE utilisateurs ADD COLUMN IF NOT EXISTS mot_de_passe VARCHAR(255) DEFAULT 'test123';"
+    psql -h localhost -U postgres -d copilote_supervision -c "UPDATE utilisateurs SET mot_de_passe = 'emna123' WHERE email = 'emna.thouabtia@enicar.ucar.tn';"
 
       - name: Run tests
         env:
