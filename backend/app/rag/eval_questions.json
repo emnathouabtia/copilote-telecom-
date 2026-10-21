@@ -1,0 +1,82 @@
+[
+  {
+    "question": "Quel est le taux d'utilisation du processeur sur le nœud concerné depuis les dernières minutes ?",
+    "expected_code_fiche": "KB-CPU-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Avez‑vous identifié un processus ou une tâche qui consomme une part disproportionnée des ressources système ?",
+    "expected_code_fiche": "KB-CPU-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Quel est le pourcentage d'occupation de la mémoire vive sur l'équipement concerné ?",
+    "expected_code_fiche": "KB-RAM-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Avez-vous identifié des processus ou services qui affichent une consommation anormale de ressources depuis ce matin ?",
+    "expected_code_fiche": "KB-RAM-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Quel est le taux d'occupation actuel du stockage sur le serveur concerné ?",
+    "expected_code_fiche": "KB-DISK-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Y a-t-il des fichiers de trace ou de sauvegarde qui n'ont pas été nettoyés depuis plusieurs jours ?",
+    "expected_code_fiche": "KB-DISK-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Pouvez-vous confirmer si l'interface réseau apparaît comme désactivée ou en erreur dans les logs du dispositif ?",
+    "expected_code_fiche": "KB-LINK-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Avez-vous constaté une perte de connectivité avec le site distant ou des messages d'échec de ping récemment ?",
+    "expected_code_fiche": "KB-LINK-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Quel est le dernier événement enregistré avant que le service ne devienne inactif ?",
+    "expected_code_fiche": "KB-SERV-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Est‑ce que les services dépendants affichent des anomalies ou sont-ils opérationnels ?",
+    "expected_code_fiche": "KB-SERV-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Les indicateurs de performance sont-ils toujours transmis ou y a-t-il une interruption du flux de données ?",
+    "expected_code_fiche": "KB-PING-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Pouvez-vous vérifier si le lien vers le serveur de collecte est opérationnel ou si une coupure d'alimentation a affecté l'équipement concerné ?",
+    "expected_code_fiche": "KB-PING-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Pouvez‑vous confirmer si le courant d’alimentation du nœud est présent ou s’il y a une interruption ?",
+    "expected_code_fiche": "KB-POWER-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Quel est le niveau de charge de la batterie de secours et le statut du convertisseur de tension ?",
+    "expected_code_fiche": "KB-POWER-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Pouvez-vous me dire si des tentatives de connexion inhabituelles ont été détectées sur les serveurs SSH ces dernières heures ?",
+    "expected_code_fiche": "KB-SEC-001",
+    "expected_type_alerte": ""
+  },
+  {
+    "question": "Avez-vous observé une hausse du trafic réseau provenant d'adresses IP inconnues ou suspectes récemment ?",
+    "expected_code_fiche": "KB-SEC-001",
+    "expected_type_alerte": ""
+  }
+]
