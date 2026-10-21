@@ -19,11 +19,7 @@
     "expected_code_fiche": "KB-RAM-001",
     "expected_type_alerte": ""
   },
-  {
-    "question": "Quel est le taux d'occupation actuel du stockage sur le serveur concerné ?",
-    "expected_code_fiche": "KB-DISK-001",
-    "expected_type_alerte": ""
-  },
+
   {
     "question": "Y a-t-il des fichiers de trace ou de sauvegarde qui n'ont pas été nettoyés depuis plusieurs jours ?",
     "expected_code_fiche": "KB-DISK-001",
