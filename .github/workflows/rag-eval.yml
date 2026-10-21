@@ -1,0 +1,74 @@
+name: RAG evaluation
+
+# Se lance quand on pousse un changement dans backend/app/rag sur la branche RAG.
+# 1re fois (pas de eval_questions.json) : génère un brouillon de questions et le
+#   commit sur la branche, pour que tu le relises.
+# Ensuite (eval_questions.json présent) : évalue le retrieval et affiche les chiffres.
+
+on:
+  push:
+    branches: [feature/rag-langchain]
+    paths:
+      - "backend/app/rag/**"
+      - ".github/workflows/rag-eval.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  rag-eval:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Rebuild knowledge base
+        working-directory: backend
+        run: |
+          rm -rf chroma_db
+          python -m app.rag.rebuild_index --csv ../docs/05_base_connaissances.csv
+
+      - name: Check for eval questions
+        id: check
+        run: |
+          if [ -f backend/app/rag/eval_questions.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate draft eval questions
+        if: steps.check.outputs.exists == 'false'
+        working-directory: backend
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: python -m app.rag.generate_eval_set --csv ../docs/05_base_connaissances.csv
+
+      - name: Commit draft questions
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+          git add backend/app/rag/eval_questions.json
+          git commit -m "chore: draft RAG eval questions (to review)"
+          git push origin HEAD:${{ github.ref_name }}
+
+      - name: Evaluate retrieval
+        if: steps.check.outputs.exists == 'true'
+        working-directory: backend
+        run: python -m app.rag.evaluate
+
+      - name: Upload results
+        if: steps.check.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: rag-eval-results
+          path: backend/app/rag/eval_results.json

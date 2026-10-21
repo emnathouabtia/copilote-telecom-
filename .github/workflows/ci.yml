@@ -2,13 +2,13 @@ name: CI/CD Copilote Telecom
 
 on:
   push:
-    branches: [main, feature/emna-backend-alerts]
+    branches: [main, feature/emna-backend-alerts, feature/rag-langchain]
   pull_request:
     branches: [main]
 
 jobs:
   test-backend:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     services:
       postgres:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -56,10 +56,10 @@ jobs:
           SECRET_KEY: test-secret-key
         run: |
           cd backend
-          python -m pytest tests/test_api.py -v
+          python -m pytest tests -v
 
   build-check:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: test-backend
     steps:
       - uses: actions/checkout@v4

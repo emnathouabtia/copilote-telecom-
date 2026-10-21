@@ -1,36 +1,108 @@
-import chromadb
+"""Pipeline RAG du copilote de supervision (version LangChain).
+
+Réutilise l'index ChromaDB existant (collection "base_connaissances") et le même
+modèle d'embeddings (all-MiniLM-L6-v2) que le script d'indexation : aucune
+ré-indexation n'est nécessaire.
+"""
+import os
+from functools import lru_cache
+
+from langchain_chroma import Chroma
+from langchain_core.embeddings import Embeddings
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_groq import ChatGroq
 from sentence_transformers import SentenceTransformer
-from app.services.llm import generate_response
 
-chroma_client = chromadb.PersistentClient(path="./chroma_db")
-collection = chroma_client.get_or_create_collection("base_connaissances")
-encoder = SentenceTransformer('all-MiniLM-L6-v2')
+CHROMA_PATH = os.getenv("CHROMA_PATH", "./chroma_db")
+COLLECTION_NAME = "base_connaissances"
+EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+TOP_K = 3
 
-def search_knowledge_base(question: str, n_results: int = 3) -> str:
-    embedding = encoder.encode(question).tolist()
-    
-    count = collection.count()
-    if count == 0:
-        return ""
-    
-    results = collection.query(
-        query_embeddings=[embedding],
-        n_results=min(n_results, count)
+
+class MiniLMEmbeddings(Embeddings):
+    """Adaptateur LangChain autour de sentence-transformers.
+
+    Même appel encode() que dans ingest.py : les vecteurs sont identiques à ceux
+    déjà stockés dans ChromaDB.
+    """
+
+    def __init__(self, model_name: str = EMBEDDING_MODEL):
+        self._model = SentenceTransformer(model_name)
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._model.encode(texts).tolist()
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._model.encode(text).tolist()
+
+
+vectorstore = Chroma(
+    collection_name=COLLECTION_NAME,
+    persist_directory=CHROMA_PATH,
+    embedding_function=MiniLMEmbeddings(),
+)
+
+PROMPT = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            "Tu es le copilote de supervision télécom de SOTETEL et tu assistes les "
+            "opérateurs du NOC. Réponds en français, de façon concise, UNIQUEMENT à "
+            "partir des fiches de procédure fournies. Si les fiches ne couvrent pas la "
+            "question, dis-le clairement et n'invente aucune procédure. Structure la "
+            "réponse : cause probable, actions N1, puis actions N2 si pertinent.",
+        ),
+        (
+            "human",
+            "Fiches de procédure :\n{context}\n\nQuestion de l'opérateur : {question}",
+        ),
+    ]
+)
+
+
+@lru_cache(maxsize=1)
+def get_answer_chain():
+    """Chaîne prompt -> LLM Groq -> texte (créée à la première utilisation)."""
+    llm = ChatGroq(
+        model=GROQ_MODEL,
+        temperature=0.2,
+        api_key=os.getenv("GROQ_API_KEY"),
     )
-    
-    if not results['documents'][0]:
-        return ""
-    
-    context = "\n\n---\n\n".join(results['documents'][0])
-    return context
+    return PROMPT | llm | StrOutputParser()
+
+
+def retrieve(question: str, k: int = TOP_K):
+    """Retourne les k fiches les plus proches (objets Document LangChain)."""
+    return vectorstore.similarity_search(question, k=k)
+
+
+def format_docs(docs) -> str:
+    return "\n\n---\n\n".join(doc.page_content for doc in docs)
+
+
+def search_knowledge_base(question: str, n_results: int = TOP_K) -> str:
+    """Compatibilité avec l'ancienne version : retourne le contexte en texte."""
+    return format_docs(retrieve(question, k=n_results))
+
 
 def ask_copilote(question: str) -> dict:
-    context = search_knowledge_base(question)
-    response = generate_response(question, context)
-    
+    docs = retrieve(question)
+    context = format_docs(docs)
+    response = get_answer_chain().invoke({"context": context, "question": question})
+
     return {
         "question": question,
         "response": response,
-        "context_used": bool(context),
-        "source": "RAG + Groq llama-3.3-70b"
+        "context_used": bool(docs),
+        "sources": [
+            {
+                "code_fiche": d.metadata.get("code_fiche", ""),
+                "type_alerte": d.metadata.get("type_alerte", ""),
+                "symptome": d.metadata.get("symptome", ""),
+            }
+            for d in docs
+        ],
+        "source": f"RAG (LangChain) + Groq {GROQ_MODEL}",
     }
